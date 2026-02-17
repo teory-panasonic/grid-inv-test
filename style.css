@@ -1,0 +1,161 @@
+:root {
+    --bg-dark: #0f0f0f;
+    --bg-panel: #1a1a1a;
+    --border-color: #333;
+    --grid-line: rgba(255, 255, 255, 0.05);
+    --highlight: #bcaaa4; /* Tarkov bej/sarımsı */
+    --item-bg: rgba(40, 40, 40, 0.95);
+    --valid-bg: rgba(86, 255, 86, 0.2);
+    --invalid-bg: rgba(255, 60, 60, 0.4);
+    --cell-size: 50px;
+}
+
+body {
+    margin: 0;
+    background-color: var(--bg-dark);
+    color: #ccc;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+}
+
+/* LAYOUT */
+.ui-layout {
+    display: flex;
+    height: 100%;
+    padding: 20px;
+    gap: 20px;
+}
+
+.left-panel {
+    width: 250px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+/* STATS */
+.panel-header {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--highlight);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+.highlight { color: var(--highlight); font-weight: bold; }
+.info-text { font-size: 11px; color: #666; margin-top: 5px; }
+
+.equipment-slots {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+.slot {
+    width: 60px; height: 60px;
+    border: 1px dashed #555;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #555;
+}
+
+/* INVENTORY WINDOWS */
+.inventory-window {
+    background: var(--bg-panel);
+    border: 1px solid #444;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+.inventory-window.floating {
+    position: absolute;
+    z-index: 100;
+    min-width: 200px;
+}
+
+.window-header {
+    background: #222;
+    padding: 5px 10px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #aaa;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    cursor: default;
+}
+.inventory-window.floating .window-header {
+    cursor: move; /* Sürüklenebilir başlık */
+    color: var(--highlight);
+}
+
+.close-btn {
+    cursor: pointer;
+    color: #d32f2f;
+    font-weight: bold;
+}
+
+/* GRID SYSTEM */
+.grid-container {
+    position: relative;
+    background-image: 
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: var(--cell-size) var(--cell-size);
+    background-color: rgba(0,0,0,0.2);
+}
+
+/* ITEMS */
+.item {
+    position: absolute;
+    background: var(--item-bg);
+    border: 1px solid #555;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 11px;
+    cursor: grab;
+    z-index: 10;
+    overflow: hidden;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.item:hover {
+    border-color: var(--highlight);
+    background: #3a3a3a;
+}
+
+.item span { pointer-events: none; text-align: center;}
+.item-subtext { font-size: 9px; color: #888; }
+
+.item.dragging {
+    opacity: 0.0; /* Orijinali gizle, ghost görünecek */
+}
+
+/* GHOST ITEM (Sürükleme sırasındaki görsel) */
+.item-ghost {
+    position: absolute;
+    background: var(--valid-bg);
+    border: 1px dashed #fff;
+    pointer-events: none;
+    z-index: 9999;
+    display: none;
+}
+.item-ghost.invalid {
+    background: var(--invalid-bg);
+    border-color: red;
+}
