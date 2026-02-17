@@ -1,515 +1,418 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <title>Unity Öncesi Envanter Prototipi</title>
-    <style>
-        :root {
-            --bg-dark: #1a1a1a;
-            --bg-panel: #252525;
-            --grid-color: #333;
-            --item-border: #4a4a4a;
-            --highlight: #9a8c18; /* Tarkovumsu sarı */
-            --cell-size: 50px;
-        }
+<meta charset="UTF-8">
+<title>Prototip v2: Tarkov Grid System</title>
+<style>
+    :root {
+        --cell-size: 50px;
+        --bg-color: #1a1a1a;
+        --grid-line: rgba(255,255,255,0.1);
+        --item-bg: rgba(60, 60, 60, 0.9);
+        --item-border: #555;
+        --valid-color: rgba(0, 255, 0, 0.3);
+        --invalid-color: rgba(255, 0, 0, 0.5);
+    }
 
-        body {
-            background-color: #0f0f0f;
-            color: #ccc;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            height: 100vh;
-            overflow: hidden;
-            user-select: none;
-        }
+    body {
+        background-color: #0d0d0d;
+        color: #ddd;
+        font-family: sans-serif;
+        margin: 0;
+        height: 100vh;
+        overflow: hidden;
+        user-select: none;
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+    }
 
-        /* LAYOUT */
-        .game-ui {
-            display: flex;
-            height: 100%;
-            padding: 20px;
-            gap: 20px;
-        }
+    /* SOL PANEL */
+    .character-panel {
+        width: 300px;
+        background: #222;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
 
-        .left-column {
-            width: 300px;
-            background: var(--bg-panel);
-            border: 1px solid #444;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 10px;
-        }
+    /* SAĞ PANEL (ENVANTERLER) */
+    .inventory-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
 
-        .right-column {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+    .container-box {
+        background: #222;
+        border: 1px solid #444;
+        display: inline-block;
+        padding: 10px;
+    }
 
-        /* PANELS */
-        .panel-header {
-            background: #111;
-            color: var(--highlight);
-            padding: 5px 10px;
-            font-size: 14px;
-            font-weight: bold;
-            border-bottom: 1px solid #444;
-            display: flex;
-            justify-content: space-between;
-        }
+    .container-header {
+        font-size: 14px;
+        color: #aaa;
+        margin-bottom: 5px;
+        display: flex;
+        justify-content: space-between;
+    }
 
-        .inventory-container {
-            background: var(--bg-panel);
-            border: 1px solid #444;
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-        }
+    /* GRID ALANI */
+    .grid {
+        position: relative;
+        background-image: 
+            linear-gradient(var(--grid-line) 1px, transparent 1px),
+            linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+        background-size: var(--cell-size) var(--cell-size);
+        background-color: rgba(0,0,0,0.3);
+        border: 1px solid #444;
+    }
 
-        /* GRID SYSTEM */
-        .grid-wrapper {
-            position: relative;
-            margin: 10px;
-            background-image: 
-                linear-gradient(var(--grid-color) 1px, transparent 1px),
-                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-            background-size: var(--cell-size) var(--cell-size);
-            border: 1px solid var(--grid-color);
-        }
+    /* EŞYA STİLİ */
+    .item {
+        position: absolute;
+        background: var(--item-bg);
+        border: 1px solid var(--item-border);
+        box-sizing: border-box;
+        cursor: grab;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 12px;
+        z-index: 10;
+        overflow: hidden;
+        transition: transform 0.1s;
+    }
+    
+    .item img {
+        max-width: 80%;
+        max-height: 80%;
+        pointer-events: none;
+    }
 
-        /* ITEMS */
-        .item {
-            position: absolute;
-            background: rgba(60, 60, 60, 0.9);
-            border: 1px solid var(--item-border);
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: grab;
-            transition: transform 0.1s;
-            font-size: 12px;
-            text-align: center;
-            z-index: 10;
-        }
+    /* SÜRÜKLENİRKEN */
+    .item.dragging {
+        opacity: 0.8;
+        z-index: 1000;
+        pointer-events: none; /* Mouse olaylarını grid'e geçir */
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        position: fixed; /* Ekranın herhangi bir yerine gidebilsin */
+    }
 
-        .item:hover {
-            border-color: var(--highlight);
-            background: rgba(80, 80, 80, 0.9);
-        }
+    /* HAYALET GÖRÜNTÜ (GHOST) */
+    .ghost-item {
+        position: absolute;
+        background: var(--valid-color);
+        border: 1px dashed #fff;
+        z-index: 5;
+        pointer-events: none;
+        display: none; /* Başlangıçta gizli */
+    }
+    .ghost-item.invalid {
+        background: var(--invalid-color);
+        border-color: red;
+    }
 
-        .item.dragging {
-            opacity: 0.5;
-            z-index: 100;
-            pointer-events: none; /* Alttaki gridi algılamak için */
-        }
-
-        .item-name { pointer-events: none; }
-        .item-weight { font-size: 10px; color: #aaa; pointer-events: none; }
-        
-        .open-btn {
-            margin-top: 5px;
-            background: #333;
-            border: 1px solid #555;
-            color: #fff;
-            font-size: 10px;
-            cursor: pointer;
-            padding: 2px 5px;
-        }
-        .open-btn:hover { background: var(--highlight); color: #000; }
-
-        /* CHARACTER SLOTS */
-        .equip-slot {
-            width: 100px;
-            height: 100px;
-            background: #151515;
-            border: 1px dashed #555;
-            margin: 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 12px;
-            color: #555;
-        }
-
-        /* FLOATING WINDOWS (BAGS) */
-        .floating-window {
-            position: absolute;
-            top: 100px;
-            left: 400px;
-            background: var(--bg-panel);
-            border: 1px solid var(--highlight);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            z-index: 50;
-            min-width: 200px;
-            min-height: 200px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .window-bar {
-            background: #111;
-            padding: 5px;
-            cursor: move;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .close-win {
-            color: red;
-            cursor: pointer;
-            font-weight: bold;
-            padding: 0 5px;
-        }
-
-        .stats {
-            margin-top: auto;
-            padding: 10px;
-            border-top: 1px solid #444;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        
-        #weight-display {
-            color: var(--highlight);
-            font-size: 18px;
-        }
-    </style>
+    .info {
+        margin-top: auto;
+        font-size: 12px;
+        color: #777;
+    }
+</style>
 </head>
 <body>
 
-<div class="game-ui">
-    <div class="left-column">
-        <h3>KARAKTER</h3>
-        <div class="equip-slot">KAFA</div>
-        <div class="equip-slot">GÖVDE</div>
-        <div class="equip-slot">SİLAH</div>
-        
-        <div class="stats">
-            <div>Toplam Ağırlık</div>
-            <div id="weight-display">0.0 kg</div>
-            <small style="color:#777">Project Zomboid Mantığı: Çanta içindeki ağırlık da buraya eklenir.</small>
-        </div>
-    </div>
-
-    <div class="right-column">
-        <div class="inventory-container" id="player-container">
-            <div class="panel-header">OYUNCU ENVANTERİ (CEPLER/ANA)</div>
-            <div class="grid-wrapper" id="grid-player" style="width: 500px; height: 300px;">
-                </div>
-        </div>
-
-        <div class="inventory-container" id="loot-container">
-            <div class="panel-header">YER / DOLAP</div>
-            <div class="grid-wrapper" id="grid-loot" style="width: 500px; height: 200px;">
-                </div>
-        </div>
+<div class="character-panel">
+    <h3>Character</h3>
+    <div>Toplam Ağırlık: <span id="total-weight">0.0</span> kg</div>
+    <div class="info">
+        <p>Kontroller:</p>
+        <ul>
+            <li>Sürükle: Sol Tık</li>
+            <li>Döndür: <b>'R'</b> Tuşu (Sürüklerken)</li>
+        </ul>
     </div>
 </div>
 
-<div id="windows-layer"></div>
+<div class="inventory-area">
+    
+    <div class="container-box">
+        <div class="container-header">PM Your Inventory</div>
+        <div id="inv-player" class="grid" style="width: 500px; height: 300px;" data-cols="10" data-rows="6">
+            <div class="ghost-item"></div>
+        </div>
+    </div>
+
+    <div class="container-box">
+        <div class="container-header">Loot / Dead Scav</div>
+        <div id="inv-loot" class="grid" style="width: 500px; height: 200px;" data-cols="10" data-rows="4">
+            <div class="ghost-item"></div>
+        </div>
+    </div>
+
+</div>
 
 <script>
-    // --- VERİ YAPISI ---
     const CELL_SIZE = 50;
-    
-    // Basit Örnek Eşyalar
-    const itemsDB = [
-        { id: 'rifle', name: 'AK-47', w: 4, h: 2, weight: 3.5, color: '#5e4034' },
-        { id: 'medkit', name: 'İlk Yardım', w: 2, h: 1, weight: 0.5, color: '#8a2be2' },
-        { id: 'water', name: 'Su', w: 1, h: 2, weight: 1.0, color: '#1e90ff' },
-        { id: 'ammo', name: 'Mermi', w: 1, h: 1, weight: 0.2, color: '#556b2f' },
-        { id: 'bag', name: 'Sırt Çantası', w: 3, h: 3, weight: 1.2, color: '#333', isContainer: true, capacityW: 5, capacityH: 4, contents: [] }
+
+    // --- VERİ MODELİ ---
+    // Her envanterin içeriğini burada tutacağız.
+    const inventories = {
+        'inv-player': { cols: 10, rows: 6, items: [] },
+        'inv-loot':   { cols: 10, rows: 4, items: [] }
+    };
+
+    // Eşya Veritabanı
+    const itemDB = {
+        'rifle': { w: 4, h: 2, color: '#6d4c41', name: 'AK-74' },
+        'pistol': { w: 2, h: 1, color: '#78909c', name: 'Glock' },
+        'medkit': { w: 2, h: 2, color: '#e57373', name: 'Salewa' },
+        'ammo':   { w: 1, h: 1, color: '#a5d6a7', name: '5.45x39' },
+        'bag':    { w: 3, h: 3, color: '#37474f', name: 'Sırt Çantası' }
+    };
+
+    // Başlangıç Eşyaları (Instance'lar)
+    // rotated: true ise genişlik ve yükseklik yer değiştirir.
+    let items = [
+        { id: 1, type: 'rifle',  x: 0, y: 0, container: 'inv-player', rotated: false },
+        { id: 2, type: 'medkit', x: 5, y: 0, container: 'inv-player', rotated: false },
+        { id: 3, type: 'bag',    x: 0, y: 0, container: 'inv-loot',   rotated: false },
+        { id: 4, type: 'pistol', x: 4, y: 0, container: 'inv-loot',   rotated: true }, // Örnek: Dönmüş eşya
+        { id: 5, type: 'ammo',   x: 7, y: 1, container: 'inv-loot',   rotated: false }
     ];
 
-    // Sahnedeki Eşyalar (Instance)
-    let worldItems = [
-        // Oyuncunun üzerindekiler
-        { uid: 1, itemId: 'rifle', x: 0, y: 0, parent: 'grid-player' },
-        { uid: 2, itemId: 'medkit', x: 5, y: 0, parent: 'grid-player' },
-        // Çanta (İçi boş başlar ama içine eşya koyulabilir)
-        { uid: 3, itemId: 'bag', x: 0, y: 3, parent: 'grid-player', contents: [
-            { uid: 99, itemId: 'ammo', x:0, y:0 } // Çantanın içinde başlayan eşya
-        ]},
-        
-        // Yerdeki eşyalar
-        { uid: 4, itemId: 'water', x: 0, y: 0, parent: 'grid-loot' },
-        { uid: 5, itemId: 'ammo', x: 2, y: 0, parent: 'grid-loot' }
-    ];
+    // --- STATE YÖNETİMİ ---
+    let dragItem = null;      // Şu an sürüklenen eşya verisi
+    let dragElement = null;   // Sürüklenen DOM elementi
+    let startOffset = {x:0, y:0}; // Mouse'un eşya içindeki konumu
+    let currentGhost = null;  // Şu an aktif olan hayalet gösterge
 
-    // --- RENDER MOTORU ---
-
+    // --- BAŞLATMA ---
     function init() {
-        renderGrid('grid-player');
-        renderGrid('grid-loot');
-        updateWeight();
+        renderAll();
+        document.addEventListener('keydown', handleInput);
     }
 
-    function renderGrid(gridId, specificItems = null) {
-        const gridEl = document.getElementById(gridId);
-        gridEl.innerHTML = ''; // Temizle
-        
-        // Eğer specificItems (çanta içi) verilmediyse, worldItems'dan bu grid'e ait olanları bul
-        let itemsToRender = specificItems;
-        if (!itemsToRender) {
-            itemsToRender = worldItems.filter(i => i.parent === gridId);
+    // Tüm envanterleri çiz
+    function renderAll() {
+        for (const [containerId, data] of Object.entries(inventories)) {
+            const containerEl = document.getElementById(containerId);
+            // Sadece itemları temizle, ghost-item kalsın
+            const existingItems = containerEl.querySelectorAll('.item');
+            existingItems.forEach(el => el.remove());
+
+            // Bu container'daki eşyaları bul
+            const containerItems = items.filter(i => i.container === containerId);
+
+            containerItems.forEach(itemData => {
+                const db = itemDB[itemData.type];
+                const el = document.createElement('div');
+                el.classList.add('item');
+                el.textContent = db.name;
+                
+                // Genişlik/Yükseklik hesapla (Dönmüş mü?)
+                const currentW = itemData.rotated ? db.h : db.w;
+                const currentH = itemData.rotated ? db.w : db.h;
+
+                el.style.width = (currentW * CELL_SIZE) + 'px';
+                el.style.height = (currentH * CELL_SIZE) + 'px';
+                el.style.left = (itemData.x * CELL_SIZE) + 'px';
+                el.style.top = (itemData.y * CELL_SIZE) + 'px';
+                el.style.backgroundColor = db.color;
+
+                // Mouse Eventleri
+                el.onmousedown = (e) => startDrag(e, itemData, el);
+                
+                containerEl.appendChild(el);
+            });
         }
-
-        itemsToRender.forEach(inst => {
-            const dbItem = itemsDB.find(x => x.id === inst.itemId);
-            const el = document.createElement('div');
-            el.className = 'item';
-            el.style.width = (dbItem.w * CELL_SIZE) + 'px';
-            el.style.height = (dbItem.h * CELL_SIZE) + 'px';
-            el.style.left = (inst.x * CELL_SIZE) + 'px';
-            el.style.top = (inst.y * CELL_SIZE) + 'px';
-            el.style.backgroundColor = dbItem.color;
-            
-            el.innerHTML = `
-                <span class="item-name">${dbItem.name}</span>
-                <span class="item-weight">${dbItem.weight}kg</span>
-            `;
-
-            // Çanta ise AÇ butonu ekle
-            if (dbItem.isContainer) {
-                const btn = document.createElement('button');
-                btn.className = 'open-btn';
-                btn.innerText = 'AÇ';
-                btn.onclick = (e) => {
-                    e.stopPropagation(); // Sürüklemeyi tetikleme
-                    openContainerWindow(inst, dbItem);
-                };
-                el.appendChild(btn);
-            }
-
-            // Sürükleme Logic'i
-            el.onmousedown = (e) => startDrag(e, el, inst, gridId, dbItem, specificItems);
-
-            gridEl.appendChild(el);
-        });
     }
 
-    // --- SÜRÜKLE BIRAK (DRAG & DROP) ---
-    
-    let draggedElement = null;
-    let offset = { x: 0, y: 0 };
-    let activeItemInstance = null;
-    let originGridId = null; // Nereden sürükleniyor
+    // --- DRAG LOGIC ---
 
-    function startDrag(e, el, instance, gridId, dbData, parentContentsArray) {
-        // Eğer butona basıldıysa sürükleme yapma
-        if(e.target.tagName === 'BUTTON') return;
+    function startDrag(e, itemData, el) {
+        if (e.button !== 0) return; // Sadece sol tık
 
-        draggedElement = el;
-        activeItemInstance = instance;
-        originGridId = gridId;
-        
-        // Mouse'un eşya içindeki konumu
+        dragItem = itemData;
+        dragElement = el;
+
+        // Mouse offset hesapla
         const rect = el.getBoundingClientRect();
-        offset.x = e.clientX - rect.left;
-        offset.y = e.clientY - rect.top;
+        startOffset.x = e.clientX - rect.left;
+        startOffset.y = e.clientY - rect.top;
 
+        // Elementi sürükleme moduna al
         el.classList.add('dragging');
-        document.body.appendChild(el); // Body'ye taşı ki her şeyin üstünde olsun
+        el.style.width = el.getBoundingClientRect().width + 'px'; // Boyutu sabitle
+        el.style.height = el.getBoundingClientRect().height + 'px';
+        
+        // Body'ye taşı (z-index sorunu olmasın diye)
+        document.body.appendChild(el);
+        moveAt(e.clientX, e.clientY);
 
-        // Global mouse eventleri
-        document.onmousemove = onDrag;
-        document.onmouseup = (evt) => endDrag(evt, dbData, parentContentsArray);
+        document.addEventListener('mousemove', onDragMove);
+        document.addEventListener('mouseup', onDragEnd);
     }
 
-    function onDrag(e) {
-        if (!draggedElement) return;
-        draggedElement.style.left = (e.clientX - offset.x) + 'px';
-        draggedElement.style.top = (e.clientY - offset.y) + 'px';
+    function moveAt(pageX, pageY) {
+        dragElement.style.left = (pageX - startOffset.x) + 'px';
+        dragElement.style.top = (pageY - startOffset.y) + 'px';
     }
 
-    function endDrag(e, dbData, parentContentsArray) {
-        if (!draggedElement) return;
+    function onDragMove(e) {
+        moveAt(e.clientX, e.clientY);
 
-        draggedElement.classList.remove('dragging');
-        document.onmousemove = null;
-        document.onmouseup = null;
+        // Hangi grid üzerindeyiz?
+        const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+        if (!elementBelow) return;
 
-        // Bırakılan yerdeki grid'i bul
-        // Not: Basitlik için grid class'ına sahip elementleri kontrol ediyoruz
-        const grids = document.querySelectorAll('.grid-wrapper');
-        let droppedGrid = null;
-        let gridRect = null;
+        const gridEl = elementBelow.closest('.grid');
+        
+        // Önceki ghostları gizle
+        document.querySelectorAll('.ghost-item').forEach(g => g.style.display = 'none');
 
-        grids.forEach(grid => {
-            const rect = grid.getBoundingClientRect();
-            if (e.clientX >= rect.left && e.clientX <= rect.right &&
-                e.clientY >= rect.top && e.clientY <= rect.bottom) {
-                droppedGrid = grid;
-                gridRect = rect;
-            }
-        });
+        if (gridEl) {
+            updateGhost(gridEl, e.clientX, e.clientY);
+        }
+    }
 
-        if (droppedGrid) {
-            // Grid koordinatlarını hesapla
-            const relX = e.clientX - gridRect.left;
-            const relY = e.clientY - gridRect.top;
+    // Grid üzerinde gölgeyi (Ghost) hesapla ve göster
+    function updateGhost(gridEl, clientX, clientY) {
+        const gridRect = gridEl.getBoundingClientRect();
+        const gridId = gridEl.id;
+        const gridData = inventories[gridId];
+
+        // Grid içindeki yerel koordinat (Mouse'un eşyanın sol üst köşesine olan mesafesini çıkarıyoruz)
+        const relX = (clientX - startOffset.x) - gridRect.left;
+        const relY = (clientY - startOffset.y) - gridRect.top;
+
+        // En yakın hücreye yuvarla (SNAP)
+        let cellX = Math.round(relX / CELL_SIZE);
+        let cellY = Math.round(relY / CELL_SIZE);
+
+        const db = itemDB[dragItem.type];
+        const w = dragItem.rotated ? db.h : db.w;
+        const h = dragItem.rotated ? db.w : db.h;
+
+        // Ghost elementini bul
+        currentGhost = gridEl.querySelector('.ghost-item');
+        currentGhost.style.display = 'block';
+        currentGhost.style.width = (w * CELL_SIZE) + 'px';
+        currentGhost.style.height = (h * CELL_SIZE) + 'px';
+        currentGhost.style.left = (cellX * CELL_SIZE) + 'px';
+        currentGhost.style.top = (cellY * CELL_SIZE) + 'px';
+
+        // Validasyon kontrolü
+        if (isValidPlacement(gridId, cellX, cellY, w, h, dragItem.id)) {
+            currentGhost.classList.remove('invalid');
+        } else {
+            currentGhost.classList.add('invalid');
+        }
+    }
+
+    // --- COLLISION & VALIDATION ---
+    // Belirtilen konuma eşya konulabilir mi?
+    function isValidPlacement(containerId, x, y, w, h, ignoreItemId) {
+        const inv = inventories[containerId];
+
+        // 1. Sınır Kontrolü (Bounds Check)
+        if (x < 0 || y < 0 || x + w > inv.cols || y + h > inv.rows) {
+            return false;
+        }
+
+        // 2. Çakışma Kontrolü (Collision Check)
+        // O container'daki diğer tüm eşyaları kontrol et
+        const itemsInContainer = items.filter(i => i.container === containerId && i.id !== ignoreItemId);
+
+        for (let other of itemsInContainer) {
+            const odb = itemDB[other.type];
+            const ow = other.rotated ? odb.h : odb.w;
+            const oh = other.rotated ? odb.w : odb.h;
+
+            // AABB Collision (Dikdörtgen kesişimi)
+            // Kendi dikdörtgenimiz: x, y, w, h
+            // Diğer dikdörtgen: other.x, other.y, ow, oh
             
-            let gridX = Math.floor(relX / CELL_SIZE);
-            let gridY = Math.floor(relY / CELL_SIZE);
-
-            // Sınır kontrolü
-            const gridW = parseInt(droppedGrid.style.width) / CELL_SIZE;
-            const gridH = parseInt(droppedGrid.style.height) / CELL_SIZE;
-
-            if (gridX + dbData.w <= gridW && gridY + dbData.h <= gridH) {
-                // TODO: Çakışma kontrolü (Basitlik için burada atlıyorum, normalde slot isOccupied kontrolü gerekir)
-                
-                // DATA GÜNCELLEME
-                
-                // 1. Eski yerden sil (Eğer bir çantanın içinden geldiyse array farklıdır)
-                if (parentContentsArray) {
-                    const idx = parentContentsArray.indexOf(activeItemInstance);
-                    if (idx > -1) parentContentsArray.splice(idx, 1);
-                } else {
-                    // Ana dünyadan sil (parent bilgisini güncellemek yeterli ama arrayden silip tekrar eklemek temizdir)
-                    // Burada worldItems içindeki instance'ın sadece koordinatını değiştiriyoruz
-                }
-
-                // 2. Yeni yere ata
-                activeItemInstance.x = gridX;
-                activeItemInstance.y = gridY;
-                
-                const targetGridId = droppedGrid.id;
-
-                // Eğer "grid-bag-..." gibi dinamik bir ID ise bu bir çanta içidir
-                if (targetGridId.startsWith('grid-bag-')) {
-                     // Çanta içi mantığı (Burası karmaşık kısmı, prototipte görsel olarak worldItems parent değiştiriyoruz)
-                     // Bu örnekte sadece görsel taşıma yapıyoruz, tam recursive yapı için data structure revizesi gerekir.
-                     // Basitlik adına:
-                     // Eğer loot veya player grid'ine atıldıysa worldItems'a parent güncelle.
-                } 
-                
-                if (targetGridId === 'grid-player' || targetGridId === 'grid-loot') {
-                     activeItemInstance.parent = targetGridId;
-                     // Eğer daha önce çanta içindeyse (parentContentsArray varsa) ve şimdi ana envantere geldiyse
-                     if (parentContentsArray) {
-                         worldItems.push(activeItemInstance);
-                     }
-                } else {
-                    // Çantanın içine atıldıysa
-                    // Bu prototipte çantalar arası transfer için tam logic yazmadık, 
-                    // fakat görsel olarak 'grid-bag-uid' içine snap olacaktır.
-                }
-
+            if (x < other.x + ow &&
+                x + w > other.x &&
+                y < other.y + oh &&
+                y + h > other.y) {
+                return false; // Çakışma var
             }
         }
 
-        // Heryeri yeniden çiz (State -> UI sync)
-        init(); 
-        
-        // Açık olan çanta pencerelerini de refreshle
-        document.querySelectorAll('.floating-window').forEach(win => {
-             const uid = win.getAttribute('data-uid');
-             const bagInstance = worldItems.find(i => i.uid == uid);
-             if(bagInstance) {
-                 const gridId = 'grid-bag-' + uid;
-                 renderGrid(gridId, bagInstance.contents);
-             }
-        });
-
-        draggedElement = null;
+        return true;
     }
 
-    // --- ÇANTA PENCERESİ MANTIĞI ---
-
-    function openContainerWindow(inst, dbItem) {
-        // Zaten açıksa açma
-        if (document.getElementById('win-' + inst.uid)) return;
-
-        const win = document.createElement('div');
-        win.id = 'win-' + inst.uid;
-        win.className = 'floating-window';
-        win.setAttribute('data-uid', inst.uid);
+    function onDragEnd(e) {
+        document.removeEventListener('mousemove', onDragMove);
+        document.removeEventListener('mouseup', onDragEnd);
         
-        // Pencere HTML
-        win.innerHTML = `
-            <div class="window-bar" onmousedown="dragWindow(event, '${win.id}')">
-                <span>${dbItem.name}</span>
-                <span class="close-win" onclick="closeWindow('${win.id}')">X</span>
-            </div>
-            <div class="grid-wrapper" id="grid-bag-${inst.uid}" 
-                 style="width: ${dbItem.capacityW * CELL_SIZE}px; height: ${dbItem.capacityH * CELL_SIZE}px; margin:10px;">
-            </div>
-        `;
-        
-        document.getElementById('windows-layer').appendChild(win);
-        
-        // İçeriği render et
-        // Not: itemsDB'de 'contents' array'i tanımladık. Gerçekte bu instance üzerinde olmalı.
-        // Bu prototipte instance üzerinde 'contents' varsa onu kullanıyoruz.
-        if (!inst.contents) inst.contents = [];
-        renderGrid('grid-bag-' + inst.uid, inst.contents);
-    }
+        // Ghost gizle
+        document.querySelectorAll('.ghost-item').forEach(g => g.style.display = 'none');
 
-    function closeWindow(id) {
-        const el = document.getElementById(id);
-        if (el) el.remove();
-    }
+        // Bırakılan yer geçerli mi?
+        const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+        const gridEl = elementBelow ? elementBelow.closest('.grid') : null;
 
-    // Pencere sürükleme (Basit)
-    function dragWindow(e, id) {
-        const el = document.getElementById(id);
-        let shiftX = e.clientX - el.getBoundingClientRect().left;
-        let shiftY = e.clientY - el.getBoundingClientRect().top;
-
-        function moveAt(pageX, pageY) {
-            el.style.left = pageX - shiftX + 'px';
-            el.style.top = pageY - shiftY + 'px';
-        }
-
-        function onMouseMove(event) {
-            moveAt(event.pageX, event.pageY);
-        }
-
-        document.addEventListener('mousemove', onMouseMove);
-
-        el.onmouseup = function() {
-            document.removeEventListener('mousemove', onMouseMove);
-            el.onmouseup = null;
-        };
-    }
-
-    // --- AĞIRLIK HESABI (Recursive Zomboid Style) ---
-    function updateWeight() {
-        let total = 0;
-        
-        // Sadece 'grid-player' üzerindeki eşyaları recursive topla
-        const playerItems = worldItems.filter(i => i.parent === 'grid-player');
-        
-        function calculateItemWeight(itemInst) {
-            const db = itemsDB.find(x => x.id === itemInst.itemId);
-            let w = db.weight;
+        if (gridEl) {
+            const gridRect = gridEl.getBoundingClientRect();
+            const relX = (e.clientX - startOffset.x) - gridRect.left;
+            const relY = (e.clientY - startOffset.y) - gridRect.top;
+            const cellX = Math.round(relX / CELL_SIZE);
+            const cellY = Math.round(relY / CELL_SIZE);
             
-            // Eğer içinde eşya varsa (Çanta ise)
-            if (itemInst.contents && itemInst.contents.length > 0) {
-                itemInst.contents.forEach(subItem => {
-                    w += calculateItemWeight(subItem);
-                });
+            const db = itemDB[dragItem.type];
+            const w = dragItem.rotated ? db.h : db.w;
+            const h = dragItem.rotated ? db.w : db.h;
+
+            if (isValidPlacement(gridEl.id, cellX, cellY, w, h, dragItem.id)) {
+                // BAŞARILI TAŞIMA
+                dragItem.container = gridEl.id;
+                dragItem.x = cellX;
+                dragItem.y = cellY;
+                // Rotated durumu zaten dragItem üzerinde güncel (R'ye basıldıysa değişti)
             }
-            return w;
         }
 
-        playerItems.forEach(i => {
-            total += calculateItemWeight(i);
-        });
-
-        document.getElementById('weight-display').innerText = total.toFixed(1) + ' kg';
+        // Eşyayı ve drag state'i temizle, sahneyi yenile
+        dragElement.remove();
+        dragElement = null;
+        dragItem = null;
+        
+        renderAll();
     }
 
-    // Başlat
+    // --- ROTATION (DÖNDÜRME) ---
+    function handleInput(e) {
+        if ((e.key === 'r' || e.key === 'R') && dragItem && dragElement) {
+            // Veri üzerinde döndür
+            dragItem.rotated = !dragItem.rotated;
+
+            // Görsel olarak döndür (width/height swap)
+            const rect = dragElement.getBoundingClientRect();
+            const oldW = rect.width;
+            const oldH = rect.height;
+            
+            dragElement.style.width = oldH + 'px';
+            dragElement.style.height = oldW + 'px';
+
+            // Döndürme sonrası mouse'u ortalamak zorundayız yoksa grid kayar
+            // Basitlik için sadece genişlik/yükseklik değiştirip devam ediyoruz, 
+            // ama updateGhost bunu yakalayacak.
+            
+            // Ghost'u anlık güncellemek için manuel tetikle
+            // (Mevcut mouse pozisyonunda updateGhost çağırırız ama elimizde event yok,
+            // kullanıcı mouse'u oynatınca düzelir veya global mouse takibi gerekir.
+            // Kullanıcı mouse'u 1px oynatsa yeterli.)
+        }
+    }
+
     init();
 
 </script>
-
 </body>
 </html>
